@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Heart, Calendar, Settings, Bell, Star, Image as ImageIcon, Download, Trash2 } from 'lucide-react';
-import Countdown from './components/Countdown';
-import CalendarView from './components/CalendarView';
-import BackgroundPicker from './components/BackgroundPicker';
-import MemoryGallery from './components/MemoryGallery';
-import Logo from './components/Logo';
-import { generateRomanticMessage } from './services/geminiService';
-import { AnniversaryState, Memory } from './types';
+import Countdown from './components/Countdown.tsx';
+import CalendarView from './components/CalendarView.tsx';
+import BackgroundPicker from './components/BackgroundPicker.tsx';
+import MemoryGallery from './components/MemoryGallery.tsx';
+import Logo from './components/Logo.tsx';
+import { generateRomanticMessage } from './services/geminiService.ts';
+import { AnniversaryState, Memory } from './types.ts';
 
 const App: React.FC = () => {
   const [state, setState] = useState<AnniversaryState>(() => {
@@ -30,7 +30,6 @@ const App: React.FC = () => {
   const [isAnniversaryDay, setIsAnniversaryDay] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
-  // Ocultar pantalla de carga al montar
   useEffect(() => {
     if (typeof (window as any).hideAppLoader === 'function') {
       (window as any).hideAppLoader();
@@ -52,7 +51,7 @@ const App: React.FC = () => {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') setDeferredPrompt(null);
     } else {
-      alert("Para descargar en tu iPhone/Android:\n\n1. Pulsa el botón 'Compartir' de tu navegador.\n2. Selecciona 'Añadir a la pantalla de inicio'.\n\n¡Así verás el corazón naranja en tu menú! ❤️");
+      alert("Para descargar:\n1. Pulsa 'Compartir'\n2. 'Añadir a pantalla de inicio'\n¡Verás el corazón naranja! 🧡");
     }
   };
 
@@ -63,7 +62,6 @@ const App: React.FC = () => {
     
     setIsAnniversaryDay(is27);
     
-    // Si es febrero y es 27, forzar el mensaje pedido por el usuario
     if (isFeb && is27) {
       setMessage("Feliz aniversario mi amor y que sean muchos más");
     } else {

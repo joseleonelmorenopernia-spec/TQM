@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, Camera, X } from 'lucide-react';
-import { Memory } from '../types';
+import { Memory } from '../types.ts';
 
 interface Props {
   memories: Memory[];

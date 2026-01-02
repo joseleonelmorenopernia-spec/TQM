@@ -68,6 +68,15 @@
             }
         };
 
+        // Failsafe: ocultar loader tras 5 segundos si algo falla
+        setTimeout(() => {
+            const loader = document.getElementById('loading-screen');
+            if (loader && !loader.classList.contains('hidden-loader')) {
+                console.warn("La app tarda demasiado en cargar, forzando cierre de loader...");
+                window.hideAppLoader();
+            }
+        }, 5000);
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js').catch(err => console.log('Error SW', err));
@@ -93,7 +102,6 @@
     <div id="loading-screen">
         <div class="flex flex-col items-center gap-6">
             <div class="relative w-24 h-24">
-              <!-- Corazón naranja animado -->
               <img src="https://img.icons8.com/emoji/512/orange-heart.png" class="w-full h-full animate-bounce" alt="Cargando..." />
             </div>
             <p class="font-romantic text-3xl text-white text-center px-4">Preparando nuestra historia...</p>
