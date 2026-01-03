@@ -61,7 +61,7 @@
     <script type="text/babel" data-presets="typescript,react" data-type="module">
         import React, { useState, useEffect, useCallback, useRef } from 'react';
         import { createRoot } from 'react-dom/client';
-        import { Heart, Calendar, Settings, Image as ImageIcon, Download, X, Share, Clock, Plus, Trash2, Camera, Bell } from 'lucide-react';
+        import { Heart, Calendar, Settings, Image as ImageIcon, Download, X, Share, Clock, Plus, Trash2, Camera, Bell, BellRing } from 'lucide-react';
         import { GoogleGenAI } from "@google/genai";
 
         // Componente de Cronómetro
@@ -125,7 +125,6 @@
             const [notificationsEnabled, setNotificationsEnabled] = useState(() => localStorage.getItem('tqm_notifications') === 'true');
 
             useEffect(() => {
-                // Registrar Service Worker
                 if ('serviceWorker' in navigator) {
                     navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Error', err));
                 }
@@ -138,28 +137,67 @@
                     setDeferredPrompt(e);
                 });
 
-                // Determinar mensaje
+                // Determinar mensaje del día
                 const now = new Date();
                 const day = now.getDate();
                 const month = now.getMonth();
+                let currentMessage = "Cada día a tu lado es el mejor regalo.";
 
                 if (month === 1 && day === 27) {
-                    setMessage("feliz aniversio mi amor y que sean muchos mas");
+                    currentMessage = "feliz aniversio mi amor y que sean muchos mas";
                 } else if (day === 27) {
-                    setMessage("¡Hoy es nuestro día especial! ❤️");
-                } else {
-                    setMessage("Cada día a tu lado es el mejor regalo.");
+                    currentMessage = "¡Hoy es nuestro día especial! ❤️";
                 }
+                
+                setMessage(currentMessage);
 
-                // Ocultar loader
                 const loader = document.getElementById('loading-screen');
                 if (loader) loader.classList.add('hidden-loader');
             }, []);
 
-            // Guardar memorias cuando cambien
+            // --- SISTEMA DE NOTIFICACIONES ZONA HORARIA VENEZUELA ---
+            const checkTimeAndNotify = useCallback(() => {
+                if (!notificationsEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+
+                // 1. Obtener la hora actual en Venezuela
+                const now = new Date();
+                const venezuelaTimeStr = now.toLocaleString("en-US", { timeZone: "America/Caracas" });
+                const venezuelaTime = new Date(venezuelaTimeStr);
+                
+                const currentHour = venezuelaTime.getHours();
+                
+                // Usamos toDateString() basado en la fecha de Venezuela para saber si ya notificamos "hoy" en Venezuela
+                const todayInVenezuela = venezuelaTime.toDateString(); 
+                const lastSentDate = localStorage.getItem('tqm_last_notif_date_vzla');
+
+                // Lógica: 
+                // - Si la hora en Caracas es >= 6 (6 AM)
+                // - Y la fecha registrada no es la de hoy (no se ha enviado hoy)
+                if (currentHour >= 6 && lastSentDate !== todayInVenezuela) {
+                    try {
+                        new Notification("Buenos días mi amor 🧡", {
+                            body: message || "Recuerda que te quiero mucho.",
+                            icon: "https://img.icons8.com/emoji/512/orange-heart.png",
+                            badge: "https://img.icons8.com/emoji/512/orange-heart.png",
+                            vibrate: [200, 100, 200],
+                            tag: 'daily-love-msg'
+                        });
+                        
+                        // Marcar como enviado hoy
+                        localStorage.setItem('tqm_last_notif_date_vzla', todayInVenezuela);
+                    } catch (e) {
+                        console.error("Error notificación:", e);
+                    }
+                }
+            }, [notificationsEnabled, message]);
+
+            // Efecto que corre el chequeo al iniciar y cada minuto
             useEffect(() => {
-                localStorage.setItem('tqm_memories', JSON.stringify(memories));
-            }, [memories]);
+                checkTimeAndNotify(); // Chequeo inmediato al abrir
+                const interval = setInterval(checkTimeAndNotify, 60000); // Chequeo cada 60 segundos por si la app está abierta
+                return () => clearInterval(interval);
+            }, [checkTimeAndNotify]);
+            // --------------------------------------------------------
 
             const handleInstall = async () => {
                 if (deferredPrompt) {
@@ -173,11 +211,23 @@
 
             const toggleNotifications = async () => {
                 if (!notificationsEnabled) {
+                    if (!('Notification' in window)) {
+                        alert("Tu dispositivo no soporta notificaciones web :(");
+                        return;
+                    }
+                    
                     const permission = await Notification.requestPermission();
                     if (permission === 'granted') {
                         setNotificationsEnabled(true);
                         localStorage.setItem('tqm_notifications', 'true');
-                        new Notification("¡TQM!", { body: "Notificaciones de amor activadas ❤️", icon: "https://img.icons8.com/emoji/512/orange-heart.png" });
+                        // Resetear fecha para permitir prueba inmediata si ya son las 6
+                        // localStorage.removeItem('tqm_last_notif_date_vzla'); 
+                        new Notification("¡TQM Activado!", { 
+                            body: "Te avisaré a las 6:00 AM (Hora Caracas) ❤️", 
+                            icon: "https://img.icons8.com/emoji/512/orange-heart.png" 
+                        });
+                    } else {
+                        alert("Necesitas dar permiso en los ajustes de tu navegador.");
                     }
                 } else {
                     setNotificationsEnabled(false);
@@ -185,6 +235,24 @@
                 }
             };
 
+            const sendTestNotification = async () => {
+                if (Notification.permission === 'granted') {
+                    new Notification("Prueba Exitosa 🧡", { 
+                        body: message || "Así llegarán tus mensajes a las 6 AM VZLA.", 
+                        icon: "https://img.icons8.com/emoji/512/orange-heart.png",
+                        vibrate: [200, 100, 200]
+                    });
+                } else {
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        new Notification("Prueba Exitosa 🧡", { body: "¡Permiso concedido!", icon: "https://img.icons8.com/emoji/512/orange-heart.png" });
+                    } else {
+                        alert("No tienes permisos activados.");
+                    }
+                }
+            };
+
+            // Resto de funciones (handleFileChange, addMemory, deleteMemory) se mantienen igual...
             const handleFileChange = (e) => {
                 const file = e.target.files[0];
                 if (file) {
@@ -213,6 +281,12 @@
                 setMemories(memories.filter(m => m.id !== id));
             };
 
+            // Guardar memorias cuando cambien
+            useEffect(() => {
+                localStorage.setItem('tqm_memories', JSON.stringify(memories));
+            }, [memories]);
+
+
             return (
                 <div style={{ background: bg, minHeight: '100vh', transition: 'background 0.8s' }} className="flex flex-col items-center p-6 pb-32 overflow-hidden relative">
                     
@@ -225,8 +299,9 @@
                             <button onClick={handleInstall} className={`p-2.5 glass rounded-full flex items-center gap-2 transition-all active:scale-95 ${deferredPrompt ? 'bg-orange-400 text-white animate-bounce' : 'text-orange-400'}`}>
                                 <Download size={20} />
                             </button>
-                            <button onClick={() => setShowSettings(true)} className="p-2.5 glass rounded-full text-white">
+                            <button onClick={() => setShowSettings(true)} className="p-2.5 glass rounded-full text-white relative">
                                 <Settings size={20} />
+                                {!notificationsEnabled && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}
                             </button>
                         </div>
                     </header>
@@ -372,17 +447,31 @@
                                 <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8" onClick={() => setShowSettings(false)}></div>
                                 
                                 <h4 className="text-orange-600 font-bold mb-4 uppercase text-xs tracking-widest">Ajustes</h4>
-                                <div className="flex justify-between items-center glass bg-gray-50 p-4 rounded-2xl mb-8">
-                                    <div className="flex items-center gap-3">
-                                        <Bell className="text-orange-500" size={20} />
-                                        <span className="text-sm font-bold text-gray-700">Notificaciones Diarias</span>
+                                
+                                {/* Sección de Notificaciones */}
+                                <div className="glass bg-gray-50 p-4 rounded-2xl mb-4">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <Bell className="text-orange-500" size={20} />
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-gray-700">Notificaciones 6 AM</span>
+                                                <span className="text-[10px] text-gray-500">Hora Caracas (Venezuela)</span>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={toggleNotifications}
+                                            className={`w-12 h-6 rounded-full transition-colors relative ${notificationsEnabled ? 'bg-orange-500' : 'bg-gray-300'}`}
+                                        >
+                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${notificationsEnabled ? 'left-7' : 'left-1'}`}></div>
+                                        </button>
                                     </div>
                                     <button 
-                                        onClick={toggleNotifications}
-                                        className={`w-12 h-6 rounded-full transition-colors relative ${notificationsEnabled ? 'bg-orange-500' : 'bg-gray-300'}`}
+                                        onClick={sendTestNotification} 
+                                        className="w-full py-2 bg-white rounded-xl text-xs font-bold text-orange-400 border border-orange-200 flex items-center justify-center gap-2 active:bg-orange-50"
                                     >
-                                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${notificationsEnabled ? 'left-7' : 'left-1'}`}></div>
+                                        <BellRing size={14} /> PROBAR NOTIFICACIÓN
                                     </button>
+                                    <p className="text-[10px] text-gray-400 mt-2 text-center">Te enviaré amor si detecto que ya son las 6 AM en VZLA.</p>
                                 </div>
 
                                 <h4 className="text-orange-600 font-bold mb-4 uppercase text-xs tracking-widest">Fondo de Pantalla</h4>
