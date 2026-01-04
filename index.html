@@ -660,12 +660,12 @@
 
             const sendTestNotification = async () => {
                 if (Notification.permission === 'granted') {
-                    // Usamos el mensaje actual para la prueba
-                    showNotification("Prueba Exitosa 🧡", message);
+                    // Usamos el mensaje actual para la prueba y añadimos el corazón naranja
+                    showNotification("Prueba Exitosa 🧡", message + " 🧡");
                 } else {
                     const permission = await Notification.requestPermission();
                     if (permission === 'granted') {
-                        showNotification("Prueba Exitosa 🧡", "¡Permiso concedido!");
+                        showNotification("Prueba Exitosa 🧡", "¡Permiso concedido! 🧡");
                     } else {
                         alert("No tienes permisos activados.");
                     }
