@@ -76,9 +76,11 @@
         import { Heart, Calendar, Settings, Image as ImageIcon, Download, X, Share, Clock, Plus, Trash2, Camera, Bell, BellRing } from 'lucide-react';
         import { GoogleGenAI } from "@google/genai";
 
-        // URL del sonido de notificación
+        // CONFIGURACIÓN DE NOTIFICACIONES "RICH MEDIA"
         const NOTIFICATION_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3";
         const NOTIFICATION_ICON_URL = "https://img.icons8.com/emoji/512/orange-heart.png";
+        // Imagen romántica de alta calidad para la "Big Picture"
+        const NOTIFICATION_IMAGE_URL = "https://images.unsplash.com/photo-1518568814500-bf5f8ca12f69?w=800&q=80"; 
 
         // Lista de frases románticas
         const lovePhrases = [
@@ -510,10 +512,7 @@
             const [notificationsEnabled, setNotificationsEnabled] = useState(() => localStorage.getItem('tqm_notifications') === 'true');
 
             // Función para obtener mensaje del día
-            // Ahora la lógica se basa en la fecha en Caracas, calculando los días transcurridos
-            // desde una fecha fija (Epoch) para asegurar rotación estricta y sin repetición.
             const getDailyMessage = useCallback(() => {
-                // 1. Obtener la fecha y hora actual exacta en Caracas
                 const now = new Date();
                 const caracasString = now.toLocaleString("en-US", { timeZone: "America/Caracas" });
                 const caracasDate = new Date(caracasString);
@@ -521,23 +520,14 @@
                 const day = caracasDate.getDate();
                 const month = caracasDate.getMonth();
 
-                // Lógica especial prioritaria para el día 27
                 if (day === 27) {
-                    if (month === 1) { // Febrero es mes 1 (0-indexado en JS)
+                    if (month === 1) { 
                         return "feliz aniversio mi amor y que sean muchos mas";
                     }
                     return "¡Hoy es nuestro día especial! ❤️";
                 }
 
-                // Lógica para días normales:
-                // Usamos una fecha de inicio fija (1 Enero 2024) para calcular un índice absoluto.
-                // Esto garantiza que el mensaje cambie cada 24 horas y siga un orden secuencial (1, 2, 3...)
-                // hasta que se acabe la lista, momento en el cual volverá a empezar.
-                // Esto cumple el requisito "un por días y no se pueden repetir".
                 const startDate = new Date('2024-01-01T00:00:00');
-                
-                // Calculamos la diferencia en milisegundos y luego en días
-                // Usamos getTime() para ser agnósticos a problemas de horario de verano
                 const diffTime = Math.abs(caracasDate.getTime() - startDate.getTime());
                 const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
                 
@@ -558,14 +548,12 @@
                     setDeferredPrompt(e);
                 });
 
-                // Establecer mensaje inicial usando la nueva lógica
                 setMessage(getDailyMessage());
 
                 const loader = document.getElementById('loading-screen');
                 if (loader) loader.classList.add('hidden-loader');
             }, [getDailyMessage]);
 
-            // Función auxiliar para reproducir sonido
             const playNotificationSound = () => {
                 try {
                     const audio = new Audio(NOTIFICATION_SOUND_URL);
@@ -576,30 +564,39 @@
                 }
             };
 
-            // Función para enviar notificación usando Service Worker
+            // ---- FUNCIÓN DE NOTIFICACIÓN MEJORADA (RICH NOTIFICATION) ----
             const showNotification = async (title, body) => {
                 if (!('serviceWorker' in navigator)) return;
                 
                 try {
-                    const registration = await navigator.serviceWorker.ready;
                     playNotificationSound();
+                    
+                    // Esperamos a que el Service Worker esté listo para usar las funciones avanzadas
+                    const registration = await navigator.serviceWorker.ready;
+                    
                     await registration.showNotification(title, {
                         body: body,
                         icon: NOTIFICATION_ICON_URL,
-                        // Eliminamos 'badge' para evitar el cuadrado blanco en Android
+                        // PROPIEDAD CLAVE: IMAGE (Big Picture en Android)
+                        image: NOTIFICATION_IMAGE_URL,
+                        // PROPIEDAD CLAVE: ACTIONS (Botones)
+                        actions: [
+                            { action: 'open', title: '💌 Ver Mensaje' },
+                            { action: 'love', title: '❤️ ¡Te Amo!' }
+                        ],
                         vibrate: [200, 100, 200, 100, 400],
                         tag: 'daily-love-msg',
                         renotify: true,
-                        requireInteraction: true, // Mantiene la notificación visible
+                        requireInteraction: true, // Se queda fija hasta que el usuario interactúe
                         data: { url: window.location.href }
                     });
                 } catch (e) {
-                    console.error("Error mostrando notificación", e);
+                    console.error("Error mostrando notificación avanzada, intentando fallback", e);
+                    // Fallback para navegadores que no soporten SW notifications (raro en Android moderno)
                     new Notification(title, { body, icon: NOTIFICATION_ICON_URL });
                 }
             };
 
-            // --- SISTEMA DE NOTIFICACIONES ZONA HORARIA VENEZUELA ---
             const checkTimeAndNotify = useCallback(() => {
                 if (!notificationsEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
 
@@ -612,10 +609,7 @@
                 const lastSentDate = localStorage.getItem('tqm_last_notif_date_vzla');
 
                 if (currentHour >= 6 && lastSentDate !== todayInVenezuela) {
-                    // Llamamos a getDailyMessage() que ahora calcula el mensaje 
-                    // basándose automáticamente en la fecha actual de Caracas.
                     const msgBody = getDailyMessage();
-                    
                     showNotification("Buenos días mi amor 🧡", msgBody + " 🧡");
                     localStorage.setItem('tqm_last_notif_date_vzla', todayInVenezuela);
                 }
@@ -626,7 +620,6 @@
                 const interval = setInterval(checkTimeAndNotify, 60000); 
                 return () => clearInterval(interval);
             }, [checkTimeAndNotify]);
-            // --------------------------------------------------------
 
             const handleInstall = async () => {
                 if (deferredPrompt) {
@@ -662,7 +655,6 @@
 
             const sendTestNotification = async () => {
                 if (Notification.permission === 'granted') {
-                    // Usamos el mensaje actual para la prueba y añadimos el corazón naranja
                     showNotification("TQM 🧡", "Te amo 🧡");
                 } else {
                     const permission = await Notification.requestPermission();
