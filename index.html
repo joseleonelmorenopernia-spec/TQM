@@ -16,6 +16,18 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Script para silenciar la advertencia de Babel en producción -->
+    <script>
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('You are using the in-browser Babel transformer')) {
+                return;
+            }
+            originalWarn.apply(console, args);
+        };
+    </script>
+    
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <style>
@@ -64,8 +76,377 @@
         import { Heart, Calendar, Settings, Image as ImageIcon, Download, X, Share, Clock, Plus, Trash2, Camera, Bell, BellRing } from 'lucide-react';
         import { GoogleGenAI } from "@google/genai";
 
-        // URL del sonido de notificación (un sonido suave y mágico)
+        // URL del sonido de notificación
         const NOTIFICATION_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3";
+
+        // Lista de frases románticas
+        const lovePhrases = [
+            "Eres mi pensamiento favorito al despertar.",
+            "Mi lugar favorito en el mundo es a tu lado.",
+            "No te busqué, pero te encontré justo cuando te necesitaba.",
+            "Cada día te quiero un poquito más que ayer.",
+            "Gracias por ser mi calma en medio de la tormenta.",
+            "Tu sonrisa es mi combustible diario.",
+            "Eres la casualidad más bonita de mi vida.",
+            "Contigo, todo lo difícil se vuelve fácil.",
+            "No eres solo mi amor, eres mi mejor amigo/a.",
+            "Me encanta la forma en que me miras.",
+            "Eres el 'por siempre' que quiero en mi vida.",
+            "Lo mejor de mi día es cuando hablamos.",
+            "Tienes esa magia de hacerme reír sin intentarlo.",
+            "Eres mi hogar, sin importar dónde estemos.",
+            "Podría ver mil películas, pero prefiero ver tu sonrisa.",
+            "Te elegiría a ti una y mil veces más.",
+            "Eres el sueño del que nunca quiero despertar.",
+            "Mi felicidad tiene tu nombre y apellido.",
+            "Basta con verte para saber que todo estará bien.",
+            "Amo los silencios cómodos que compartimos.",
+            "Eres mi persona favorita en el universo entero.",
+            "Gracias por aceptarme tal y como soy.",
+            "El mundo es más bonito desde que estás tú.",
+            "Eres el motivo de mis sonrisas distraídas.",
+            "No necesito mucho, solo que te quedes conmigo.",
+            "Tu voz es mi melodía favorita.",
+            "En un mar de gente, mis ojos siempre te buscan a ti.",
+            "Eres mi mayor aventura y mi mejor destino.",
+            "Eres el regalo más lindo que me ha dado la vida.",
+            "Simplemente, gracias por existir",
+            "Tus abrazos son mi refugio perfecto.",
+            "Me pierdo en tus ojos y me encuentro en tu corazón.",
+            "Te quiero así, tal cual, sin cambiarle nada.",
+            "Eres la razón por la que creo en el 'para siempre'.",
+            "Un minuto a tu lado vale por mil horas de soledad.",
+            "Mi corazón late más fuerte cuando escucho tus pasos.",
+            "Eres el dueño/a de todos mis suspiros.",
+            "Lo nuestro es mi historia favorita.",
+            "Besarte es como tocar el cielo con las manos.",
+            "Eres la pieza que le faltaba a mi rompecabezas.",
+            "No hay distancia que pueda con lo que siento.",
+            "Tu amor es mi mayor tesoro.",
+            "Eres mi sol en los días nublados.",
+            "Qué suerte la mía haberme cruzado contigo.",
+            "Eres mucho más de lo que siempre soñé.",
+            "Cada beso tuyo es una promesa de amor.",
+            "Me haces sentir la persona más especial del mundo.",
+            "Eres mi presente y quiero que seas mi futuro.",
+            "Tu mano encaja perfectamente con la mía.",
+            "Amar es verte y no querer estar en ningún otro lugar.",
+            "Me enamoré de tu alma antes de tocar tu piel.",
+            "Eres el brillo de mis ojos.",
+            "Contigo aprendí lo que realmente significa amar.",
+            "Eres mi pensamiento constante.",
+            "No hay nada que me guste más que tus abrazos.",
+            "Te amo por lo que eres, pero sobre todo por cómo soy cuando estoy contigo.",
+            "Tu amor me hace ser una mejor persona.",
+            "Eres mi 'momento favorito' del día.",
+            "Eres el refugio donde siempre quiero volver.",
+            "Te quiero hoy, mañana y el resto de mi vida.",
+            "Juntos somos el mejor equipo que existe.",
+            "No importa el camino, si es contigo, me apunto.",
+            "Gracias por creer en mí incluso cuando yo no lo hago.",
+            "Eres mi inspiración de todos los días.",
+            "Siempre estaré para sostener tu mano.",
+            "Tu felicidad es la mía.",
+            "Me encanta planear el futuro a tu lado.",
+            "Eres la mejor parte de mi realidad.",
+            "En las buenas y en las malas, siempre contigo.",
+            "Eres mi paz en este mundo tan loco.",
+            "No cambiaría ni un segundo de lo que hemos vivido.",
+            "Eres mi motivación para cumplir mis sueños.",
+            "Qué bonito es saber que caminas a mi lado.",
+            "Eres el apoyo que siempre necesité.",
+            "Tu amor me da alas para volar.",
+            "Admiro todo de ti, especialmente tu corazón.",
+            "Eres la luz que guía mis días oscuros.",
+            "No hay reto que no podamos superar juntos.",
+            "Gracias por ser mi roca y mi refugio.",
+            "Eres el mejor capítulo de mi vida.",
+            "Me haces sentir que todo es posible.",
+            "Tu confianza es el regalo más grande.",
+            "Quiero envejecer contando historias a tu lado.",
+            "Eres mi puerto seguro.",
+            "Gracias por hacerme brillar.",
+            "Te amo en los días fáciles y más en los difíciles.",
+            "Eres mi mayor orgullo.",
+            "Cada aventura contigo es un recuerdo inolvidable.",
+            "Eres mi hoy y todos mis mañanas.",
+            "Eres, simplemente, lo mejor que me ha pasado.",
+            "Eres el 'una vez en la vida' que me pasó a mí.",
+            "Me gusta cómo eres, pero me encanta cómo soy cuando estoy contigo.",
+            "Eres mi dosis diaria de alegría y mi café favorito.",
+            "No cambiaría ni un segundo a tu lado por una eternidad sin ti.",
+            "Eres el motivo por el que sonrío al mirar el celular.",
+            "Cada detalle tuyo es un tesoro para mí.",
+            "Tu risa es el sonido más bonito que conozco.",
+            "Gracias por hacer que los días ordinarios sean extraordinarios.",
+            "Eres mi notificación favorita.",
+            "En tus ojos veo el mundo de una forma más bella.",
+            "No hay nada más tierno que tus manos buscando las mías.",
+            "Me encanta cómo me conoces incluso mejor que yo mismo/a.",
+            "Eres esa canción que no me canso de escuchar.",
+            "Tu amor es el ingrediente secreto de mi felicidad.",
+            "Me haces sentir mariposas, incluso en los días grises.",
+            "Quédate un ratito más... o toda la vida.",
+            "Eres mi pensamiento más recurrente.",
+            "Contigo, el tiempo vuela y el corazón se ensancha.",
+            "Eres el 'te quiero' más sincero que he dicho.",
+            "Me encanta perderme en nuestra complicidad.",
+            "Eres mi refugio cuando el mundo se vuelve ruidoso.",
+            "Un mensaje tuyo me cambia el humor por completo.",
+            "Amo cómo me cuidas sin que te lo pida.",
+            "Eres la razón de mis ganas de todo.",
+            "Cada beso tuyo me cuenta una historia de amor.",
+            "Eres mi persona preferida para no hacer nada.",
+            "Me haces sentir a salvo con solo un abrazo.",
+            "Eres el sueño hecho realidad que nunca pedí pero siempre necesité.",
+            "Tu mirada me dice todo lo que las palabras no pueden.",
+            "Gracias por ser mi lugar seguro.",
+            "Caminar a tu lado es mi actividad favorita.",
+            "Eres el horizonte que siempre quiero alcanzar.",
+            "Juntos podemos con todo lo que venga.",
+            "Mi proyecto favorito es nuestra vida juntos.",
+            "Gracias por creer en nosotros desde el primer día.",
+            "Eres el hogar que quiero construir paso a paso.",
+            "No importa dónde, mientras sea contigo.",
+            "Eres la mejor inversión de tiempo y amor.",
+            "Admiro la persona en la que te conviertes cada día.",
+            "Eres mi brújula en los momentos de duda.",
+            "Quiero que seamos historia, pero de las que nunca terminan.",
+            "Tu apoyo es el motor que me impulsa a mejorar.",
+            "Eres mi mano derecha y mi corazón entero.",
+            "Juntos somos imparables.",
+            "Sueño con despertar a tu lado por el resto de mis días.",
+            "Tu amor me da la fuerza para enfrentar cualquier miedo.",
+            "Eres la pieza que hace que todo encaje.",
+            "Gracias por ser mi compañero/a de aventuras.",
+            "Eres el 'sí' más fácil de toda mi vida.",
+            "Construir recuerdos contigo es mi pasatiempo preferido.",
+            "Eres la luz al final de cualquier túnel.",
+            "Me encanta cómo soñamos despiertos juntos.",
+            "Eres el regalo que no dejo de agradecer.",
+            "Contigo el futuro no da miedo, da ilusión.",
+            "Eres mi mejor decisión.",
+            "Tu sonrisa es el mapa que guía mis pasos.",
+            "Gracias por elegirme cada mañana.",
+            "Eres mi presente, mi futuro y mi todo.",
+            "Lo mejor está por venir, y quiero que sea contigo.",
+            "Eres el amor de mi vida, hoy y siempre.",
+            "Te amo no solo por cómo eres, sino por cómo soy cuando estoy a tu lado.",
+            "Eres el silencio que me da paz y el ruido que me da vida.",
+            "Mi corazón reconoció al tuyo mucho antes que mis ojos.",
+            "Eres la calma en mi caos.",
+            "Lo nuestro es un idioma que solo nosotros entendemos.",
+            "Amarte es la forma más bonita de vivir.",
+            "Eres la respuesta a todas mis preguntas sobre el amor.",
+            "Mi alma se siente en casa cuando te escucho hablar.",
+            "Eres el latido que le da ritmo a mi vida.",
+            "Gracias por ver luz en mis partes más oscuras.",
+            "Eres la poesía que nunca supe escribir.",
+            "Tu amor me ha enseñado a amarme más a mí mismo/a.",
+            "No te quiero para mí, te quiero conmigo.",
+            "Eres la magia que le faltaba a mi realidad.",
+            "Lo más valioso que tengo no es algo, es alguien: tú.",
+            "Eres la esencia de mis mejores recuerdos.",
+            "Amarte es una aventura que quiero repetir cada día.",
+            "Eres el refugio donde mi alma descansa.",
+            "Gracias por ser la razón de mi gratitud diaria.",
+            "Tu amor es mi mayor libertad.",
+            "Eres el universo entero en una sola persona.",
+            "Me haces sentir vivo/a con solo una mirada.",
+            "Eres la melodía que siempre suena en mi interior.",
+            "Gracias por ser mi ancla en la tierra y mis alas en el cielo.",
+            "Eres la casualidad más perfecta de mi destino.",
+            "No eres solo una parte de mi vida, eres mi vida entera.",
+            "Tu amor es el sol que calienta mi alma.",
+            "Eres el regalo que nunca dejaré de cuidar.",
+            "Te elijo hoy, mañana y por siempre.",
+            "Eres el amor en su forma más pura.",
+            "Eres la única persona por la que compartiría mi comida favorita.",
+            "Me gustas más que dormir cinco minutos más.",
+            "Eres el 'error' más bonito en el que he caído.",
+            "Gracias por aguantar mis dramas y reírte de mis chistes malos.",
+            "Si fueras un emoji, serías el de los corazones en los ojos.",
+            "Te quiero casi tanto como a mi perro/gato (y eso es mucho).",
+            "Eres la razón por la que mi historial de búsqueda está lleno de cursilerías.",
+            "Me encantas, incluso cuando tienes hambre y te pones de mal humor.",
+            "Eres mi notificación favorita en medio de un lunes aburrido.",
+            "Gracias por ser mi cómplice en todas mis locuras.",
+            "Eres la única persona que me hace reír cuando quiero estar enojado/a.",
+            "Tu risa es mi sonido de alarma preferido.",
+            "Me gustas más que el WiFi gratis.",
+            "Eres el ingrediente que le faltaba a mi receta de la felicidad.",
+            "Contigo, hasta hacer las compras del súper es divertido.",
+            "Eres mi persona favorita para molestar el resto de mi vida.",
+            "Gracias por no salir corriendo cuando conociste mi lado más loco.",
+            "Eres el sol de mis mañanas y el sueño de mis noches.",
+            "Te quiero más que a mi serie favorita de Netflix.",
+            "Eres el 'meme' que me hace sonreír todo el día.",
+            "Gracias por ser el mejor almohadón del mundo.",
+            "Me encanta que seamos tan raros juntos.",
+            "Eres el dueño/a de mis mejores carcajadas.",
+            "No hay nadie en el mundo con quien prefiera perder el tiempo.",
+            "Eres mi 'crush' eterno de la vida real.",
+            "Gracias por hacerme cosquillas en el alma.",
+            "Eres el premio gordo que me gané sin comprar lotería.",
+            "Te amo incluso cuando me robas las sábanas por la noche.",
+            "Eres mi humano favorito en todo el planeta.",
+            "Simplemente, me haces muy feliz.",
+            "En tus brazos encuentro la fuerza que me falta.",
+            "Gracias por ser mi roca cuando todo parece desmoronarse.",
+            "Juntos hemos superado tormentas y salido más fuertes.",
+            "Tu amor es el escudo que me protege de cualquier miedo.",
+            "No hay problema que parezca grande si tú estás a mi lado.",
+            "Gracias por no soltar mi mano en los días difíciles.",
+            "Eres la razón por la que siempre vuelvo a intentarlo.",
+            "Admiro tu valentía y me contagias tu fuerza.",
+            "Contigo aprendí que el amor es saber quedarse cuando es difícil.",
+            "Eres mi motivación para ser mejor cada día.",
+            "Gracias por ser mi luz en los momentos de oscuridad.",
+            "Lo nuestro es a prueba de todo.",
+            "Me encanta cómo nos reconstruimos el uno al otro.",
+            "Eres el refugio donde siempre encuentro paz.",
+            "Tu fe en mí me hace sentir capaz de todo.",
+            "No importa lo que pase, siempre elegiré luchar por lo nuestro.",
+            "Eres el motor que me impulsa a no rendirme nunca.",
+            "Gracias por ver mi potencial incluso cuando yo no lo veía.",
+            "Juntos somos una fuerza de la naturaleza.",
+            "Eres la calma que llega después de cualquier tormenta.",
+            "Tu amor me da el coraje que necesito para volar.",
+            "Eres el apoyo incondicional que siempre soñé tener.",
+            "Gracias por ser mi equipo en esta aventura llamada vida.",
+            "Lo que siento por ti es más fuerte que cualquier obstáculo.",
+            "Eres mi recordatorio constante de que todo estará bien.",
+            "Me haces sentir invencible.",
+            "Gracias por sanar con amor lo que otros rompieron con dolor.",
+            "Eres el ancla que me mantiene firme en la tierra.",
+            "Tu amor es mi mayor victoria.",
+            "Siempre, pase lo que pase, serás mi prioridad.",
+            "Admiro la forma en la que ves el mundo.",
+            "Gracias por enseñarme tantas cosas sin decir una palabra.",
+            "Eres la persona más increíble que he conocido.",
+            "Me encanta la bondad que emana de tu corazón.",
+            "Gracias por existir y por dejarme ser parte de tu vida.",
+            "Eres mi ejemplo de amor, paciencia y entrega.",
+            "Admiro tu inteligencia y la pasión que pones en todo.",
+            "Gracias por hacerme sentir tan afortunado/a cada día.",
+            "Eres un ser de luz que ilumina todo a su paso.",
+            "Me encanta la forma en que cuidas de los que amas.",
+            "Gracias por todos los sacrificios que haces por nosotros.",
+            "Eres mucho más de lo que merezco, pero todo lo que necesito.",
+            "Admiro tu capacidad de encontrar belleza en lo pequeño.",
+            "Gracias por ser mi confidente y mi guía.",
+            "Eres la inspiración de mis mejores pensamientos.",
+            "Me siento orgulloso/a de la persona que eres.",
+            "Gracias por llenar mi vida de colores que no conocía.",
+            "Eres el detalle más lindo que el destino tuvo conmigo.",
+            "Admiro tu sonrisa, pero más el corazón que hay detrás.",
+            "Gracias por ser mi apoyo y mi alegría constante.",
+            "Eres la definición perfecta de lo que es el amor.",
+            "Me encanta cómo haces que todo parezca más simple.",
+            "Gracias por elegirme para compartir tus días.",
+            "Eres mi persona de referencia para todo lo bueno.",
+            "Admiro tu paciencia infinita conmigo.",
+            "Gracias por ser la razón por la que doy gracias al cielo.",
+            "Eres el sueño que nunca quiero que termine.",
+            "Me encanta la paz que transmites con solo estar presente.",
+            "Gracias por ser tú, sin filtros y con toda tu magia.",
+            "Te admiro, te respeto y te amo profundamente.",
+            "Eres el secreto que guardo con más amor.",
+            "Me encanta la paz que encuentro en tu pecho.",
+            "Contigo no tengo que fingir ser nadie más.",
+            "Eres la primera persona a la que quiero contarle todo.",
+            "Tu amor es el tatuaje más bonito en mi memoria.",
+            "Me basta con que estés para que el día sea perfecto.",
+            "Eres el refugio donde mis miedos se disipan.",
+            "Me enamoré de tu forma de ver la vida.",
+            "Eres mi lugar seguro en este mundo caótico.",
+            "Lo nuestro no tiene explicación, pero tiene todo el sentido.",
+            "Eres el suspiro que se me escapa cuando te pienso.",
+            "Mi corazón te reconoce en cualquier lugar.",
+            "Eres el 'para siempre' que antes me daba miedo.",
+            "Amo cómo nuestras manos parecen estar hechas la una para la otra.",
+            "Eres la razón por la que mi mundo tiene más luz.",
+            "Me gusta quién soy cuando estoy contigo.",
+            "Eres la mejor parte de mi realidad.",
+            "Tu amor me hace sentir que puedo conquistar el mundo.",
+            "Eres el pensamiento que me hace sonreír en medio del tráfico.",
+            "No es lo que siento por ti, es lo que no siento por nadie más.",
+            "Eres mi hogar, mi paz y mi alegría.",
+            "Me encanta la forma en que cuidas mis sueños.",
+            "Eres el latido que me recuerda que estoy vivo/a.",
+            "Gracias por elegirme una y otra vez.",
+            "Eres la coincidencia más exacta del universo.",
+            "Tu mirada es el único idioma que mi corazón entiende.",
+            "Eres la melodía que siempre quiero que suene.",
+            "Mi vida es mucho más bonita porque tú estás en ella.",
+            "Eres mi 'todo' en una sola palabra.",
+            "Te amo más allá de lo que las palabras pueden expresar.",
+            "Te elijo a ti por encima de todas las cosas.",
+            "Mi mayor compromiso es verte feliz.",
+            "No prometo que será fácil, pero sí que valdrá la pena.",
+            "Eres mi prioridad absoluta.",
+            "Gracias por ser mi ancla en los momentos de deriva.",
+            "Tu amor es la única constante en mi vida.",
+            "Juntos somos capaces de escribir la mejor historia.",
+            "Eres la mano que nunca quiero soltar.",
+            "Mi lealtad es un regalo que te pertenece.",
+            "Eres el proyecto más importante de mi vida.",
+            "Gracias por caminar a mi ritmo, sin prisas pero sin pausa.",
+            "Eres el apoyo que me sostiene cuando el mundo pesa.",
+            "Te quiero para los días de sol y para los de tormenta.",
+            "Eres mi equipo, mi socio/a y mi amor.",
+            "No hay lugar en el mundo donde prefiera estar que a tu lado.",
+            "Tu amor me da la seguridad que siempre busqué.",
+            "Eres el motivo por el cual nunca me rindo.",
+            "Gracias por construir este camino conmigo.",
+            "Eres el puerto donde siempre quiero atracar.",
+            "Mi corazón es tu hogar por el tiempo que quieras quedarte.",
+            "Eres la mejor decisión que he tomado en mi vida.",
+            "Juntos hacemos que lo imposible parezca sencillo.",
+            "Tu confianza es el tesoro que más cuido.",
+            "Eres la razón por la que creo en los finales felices.",
+            "Gracias por ser mi calma en medio del ruido.",
+            "Eres el hilo rojo que me conectó con la felicidad.",
+            "Te amo con la certeza de quien sabe que ha llegado a casa.",
+            "Eres mi presente y mi futuro más brillante.",
+            "Gracias por ser la mejor parte de mi vida diaria.",
+            "Mi amor por ti crece con cada amanecer.",
+            "Eres el resumen de todo lo que hice bien.",
+            "Gracias por 365 días de pura magia a tu lado.",
+            "Eres el regalo que no dejo de agradecerle a la vida.",
+            "Mi amor por ti no tiene fecha de vencimiento.",
+            "Eres la última persona en la que pienso antes de dormir.",
+            "Gracias por hacerme sentir tan especial cada segundo.",
+            "Eres el amor de mi vida, ayer, hoy y siempre.",
+            "Me haces sentir que la vida es una aventura maravillosa.",
+            "Eres mi principio y mi fin.",
+            "Gracias por enseñarme que el amor verdadero existe.",
+            "Eres la luz que nunca se apaga en mi corazón.",
+            "Me encanta soñar con nuestro futuro juntos.",
+            "Eres la razón por la que sonrío sin motivo.",
+            "Gracias por ser mi refugio y mi aventura al mismo tiempo.",
+            "Eres el latido más fuerte de mi pecho.",
+            "Lo mejor de mi año ha sido amarte.",
+            "Eres mi persona favorita en todo el multiverso.",
+            "Gracias por darle sentido a mis silencios.",
+            "Eres la poesía que mis ojos leen cada día.",
+            "Te amo por lo que eres y por lo que me haces ser.",
+            "Eres mi sol en invierno y mi brisa en verano.",
+            "Gracias por ser mi 'para siempre' en un mundo pasajero.",
+            "Eres el sueño del que nunca despertaré.",
+            "Mi corazón late al ritmo de tu nombre.",
+            "Eres el tesoro más grande que la vida me ha dado.",
+            "Gracias por hacerme creer en la magia de nuevo.",
+            "Eres mi felicidad hecha persona.",
+            "Te elijo hoy y te elegiré todos los días de mi vida.",
+            "Eres mi inspiración, mi calma y mi locura.",
+            "Gracias por ser mi hogar en cualquier parte del mundo.",
+            "Eres la mejor historia que el destino escribió para mí.",
+            "Mi amor por ti es infinito, sin principio ni final.",
+            "Eres la razón por la que cada día vale la pena.",
+            "Gracias por estos 365 días de amor incondicional.",
+            "Eres, y siempre serás, el gran amor de mi vida."
+        ];
 
         // Componente de Cronómetro
         const Countdown = () => {
@@ -127,6 +508,42 @@
             const [newMemory, setNewMemory] = useState({ image: '', caption: '' });
             const [notificationsEnabled, setNotificationsEnabled] = useState(() => localStorage.getItem('tqm_notifications') === 'true');
 
+            // Función para obtener mensaje del día
+            // Ahora la lógica se basa en la fecha en Caracas, calculando los días transcurridos
+            // desde una fecha fija (Epoch) para asegurar rotación estricta y sin repetición.
+            const getDailyMessage = useCallback(() => {
+                // 1. Obtener la fecha y hora actual exacta en Caracas
+                const now = new Date();
+                const caracasString = now.toLocaleString("en-US", { timeZone: "America/Caracas" });
+                const caracasDate = new Date(caracasString);
+                
+                const day = caracasDate.getDate();
+                const month = caracasDate.getMonth();
+
+                // Lógica especial prioritaria para el día 27
+                if (day === 27) {
+                    if (month === 1) { // Febrero es mes 1 (0-indexado en JS)
+                        return "feliz aniversio mi amor y que sean muchos mas";
+                    }
+                    return "¡Hoy es nuestro día especial! ❤️";
+                }
+
+                // Lógica para días normales:
+                // Usamos una fecha de inicio fija (1 Enero 2024) para calcular un índice absoluto.
+                // Esto garantiza que el mensaje cambie cada 24 horas y siga un orden secuencial (1, 2, 3...)
+                // hasta que se acabe la lista, momento en el cual volverá a empezar.
+                // Esto cumple el requisito "un por días y no se pueden repetir".
+                const startDate = new Date('2024-01-01T00:00:00');
+                
+                // Calculamos la diferencia en milisegundos y luego en días
+                // Usamos getTime() para ser agnósticos a problemas de horario de verano
+                const diffTime = Math.abs(caracasDate.getTime() - startDate.getTime());
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                
+                const index = diffDays % lovePhrases.length;
+                return lovePhrases[index];
+            }, []);
+
             useEffect(() => {
                 if ('serviceWorker' in navigator) {
                     navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Error', err));
@@ -140,23 +557,12 @@
                     setDeferredPrompt(e);
                 });
 
-                // Determinar mensaje del día
-                const now = new Date();
-                const day = now.getDate();
-                const month = now.getMonth();
-                let currentMessage = "Cada día a tu lado es el mejor regalo.";
-
-                if (month === 1 && day === 27) {
-                    currentMessage = "feliz aniversio mi amor y que sean muchos mas";
-                } else if (day === 27) {
-                    currentMessage = "¡Hoy es nuestro día especial! ❤️";
-                }
-                
-                setMessage(currentMessage);
+                // Establecer mensaje inicial usando la nueva lógica
+                setMessage(getDailyMessage());
 
                 const loader = document.getElementById('loading-screen');
                 if (loader) loader.classList.add('hidden-loader');
-            }, []);
+            }, [getDailyMessage]);
 
             // Función auxiliar para reproducir sonido
             const playNotificationSound = () => {
@@ -169,17 +575,13 @@
                 }
             };
 
-            // Función para enviar notificación usando Service Worker (Corrige el problema de la URL)
+            // Función para enviar notificación usando Service Worker
             const showNotification = async (title, body) => {
                 if (!('serviceWorker' in navigator)) return;
                 
                 try {
                     const registration = await navigator.serviceWorker.ready;
-                    
-                    // Reproducir sonido
                     playNotificationSound();
-
-                    // Mostrar notificación nativa
                     await registration.showNotification(title, {
                         body: body,
                         icon: "https://img.icons8.com/emoji/512/orange-heart.png",
@@ -187,11 +589,10 @@
                         vibrate: [200, 100, 200, 100, 400],
                         tag: 'daily-love-msg',
                         renotify: true,
-                        data: { url: window.location.href } // Para abrir la app al tocar
+                        data: { url: window.location.href }
                     });
                 } catch (e) {
                     console.error("Error mostrando notificación", e);
-                    // Fallback para notificación básica
                     new Notification(title, { body, icon: "https://img.icons8.com/emoji/512/orange-heart.png" });
                 }
             };
@@ -200,35 +601,27 @@
             const checkTimeAndNotify = useCallback(() => {
                 if (!notificationsEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
 
-                // 1. Obtener la hora actual en Venezuela
                 const now = new Date();
                 const venezuelaTimeStr = now.toLocaleString("en-US", { timeZone: "America/Caracas" });
                 const venezuelaTime = new Date(venezuelaTimeStr);
                 
                 const currentHour = venezuelaTime.getHours();
-                
-                // Usamos toDateString() basado en la fecha de Venezuela para saber si ya notificamos "hoy" en Venezuela
                 const todayInVenezuela = venezuelaTime.toDateString(); 
                 const lastSentDate = localStorage.getItem('tqm_last_notif_date_vzla');
 
-                // Lógica: 
-                // - Si la hora en Caracas es >= 6 (6 AM)
-                // - Y la fecha registrada no es la de hoy (no se ha enviado hoy)
                 if (currentHour >= 6 && lastSentDate !== todayInVenezuela) {
-                    // Texto seguro
-                    const msgBody = message || "Recuerda que te quiero mucho.";
+                    // Llamamos a getDailyMessage() que ahora calcula el mensaje 
+                    // basándose automáticamente en la fecha actual de Caracas.
+                    const msgBody = getDailyMessage();
                     
                     showNotification("Buenos días mi amor 🧡", msgBody);
-                    
-                    // Marcar como enviado hoy
                     localStorage.setItem('tqm_last_notif_date_vzla', todayInVenezuela);
                 }
-            }, [notificationsEnabled, message]);
+            }, [notificationsEnabled, getDailyMessage]);
 
-            // Efecto que corre el chequeo al iniciar y cada minuto
             useEffect(() => {
-                checkTimeAndNotify(); // Chequeo inmediato al abrir
-                const interval = setInterval(checkTimeAndNotify, 60000); // Chequeo cada 60 segundos por si la app está abierta
+                checkTimeAndNotify(); 
+                const interval = setInterval(checkTimeAndNotify, 60000); 
                 return () => clearInterval(interval);
             }, [checkTimeAndNotify]);
             // --------------------------------------------------------
@@ -254,13 +647,8 @@
                     if (permission === 'granted') {
                         setNotificationsEnabled(true);
                         localStorage.setItem('tqm_notifications', 'true');
-                        
-                        // Sonido de confirmación
                         playNotificationSound();
-                        
-                        // Enviar notificación de prueba técnica (usando el nuevo método)
                         showNotification("¡TQM Activado!", "Te avisaré a las 6:00 AM (Hora Caracas) ❤️");
-
                     } else {
                         alert("Necesitas dar permiso en los ajustes de tu navegador.");
                     }
@@ -272,7 +660,8 @@
 
             const sendTestNotification = async () => {
                 if (Notification.permission === 'granted') {
-                    showNotification("Prueba Exitosa 🧡", message || "Así llegarán tus mensajes a las 6 AM VZLA.");
+                    // Usamos el mensaje actual para la prueba
+                    showNotification("Prueba Exitosa 🧡", message);
                 } else {
                     const permission = await Notification.requestPermission();
                     if (permission === 'granted') {
@@ -283,7 +672,6 @@
                 }
             };
 
-            // Resto de funciones (handleFileChange, addMemory, deleteMemory) se mantienen igual...
             const handleFileChange = (e) => {
                 const file = e.target.files[0];
                 if (file) {
@@ -312,7 +700,6 @@
                 setMemories(memories.filter(m => m.id !== id));
             };
 
-            // Guardar memorias cuando cambien
             useEffect(() => {
                 localStorage.setItem('tqm_memories', JSON.stringify(memories));
             }, [memories]);
